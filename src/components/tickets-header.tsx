@@ -40,7 +40,7 @@ export function TicketsHeader() {
           </Link>
           {showAgentDashboard && (
             <Link
-              href="/tickets/agent"
+              href="/agent/tickets/dashboard"
               className="text-sm font-medium text-muted transition-colors duration-200 hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
               Agent Dashboard

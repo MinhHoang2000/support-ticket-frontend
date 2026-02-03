@@ -37,3 +37,22 @@ export function getStatusColorClass(status: string): string {
     "bg-muted text-muted-foreground"
   );
 }
+
+/** Left border color matching status (for card borders). */
+export const STATUS_BORDER_CLASSES: Record<TicketStatus, string> = {
+  [TicketStatus.OPEN]:
+    "border-l-4 border-l-blue-600 dark:border-l-blue-400",
+  [TicketStatus.IN_PROGRESS]:
+    "border-l-4 border-l-amber-600 dark:border-l-amber-400",
+  [TicketStatus.RESOLVED]:
+    "border-l-4 border-l-emerald-600 dark:border-l-emerald-400",
+  [TicketStatus.CLOSED]:
+    "border-l-4 border-l-border",
+};
+
+export function getStatusBorderClass(status: string): string {
+  return (
+    STATUS_BORDER_CLASSES[status as TicketStatus] ??
+    "border-l-4 border-l-border"
+  );
+}

@@ -45,6 +45,38 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Pagination: force text and icons to never match background (override Ant Design tokens) */
+.ant-pagination-item a,
+.ant-pagination-prev button,
+.ant-pagination-next button,
+.ant-pagination-item-link,
+.ant-pagination-total-text {
+  color: var(--foreground) !important;
+}
+.ant-pagination-item-link svg {
+  fill: currentColor !important;
+}
+.ant-pagination-item:hover a,
+.ant-pagination-prev:hover button,
+.ant-pagination-next:hover button {
+  color: var(--primary) !important;
+}
+.ant-pagination-item-active a,
+.ant-pagination-item-active:hover a {
+  color: #fff !important;
+}
+.ant-pagination-item-ellipsis {
+  color: var(--muted) !important;
+}
+.ant-pagination-disabled button,
+.ant-pagination-disabled .ant-pagination-item-link {
+  color: var(--foreground) !important;
+  opacity: 0.5;
+}
+.ant-pagination-options .ant-select-selection-item {
+  color: var(--foreground) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

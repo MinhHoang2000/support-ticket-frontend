@@ -12,36 +12,29 @@ import {
   fetchMyTickets,
   fetchAllTickets,
   getTicket,
+  getAgentTicket,
   createTicket,
   updateDraft,
   resolveTicket,
+  closeTicket,
   type Ticket,
   type TicketDetail,
+  type UserTicketDetail,
+  type TicketListParams,
 } from "./tickets-api";
 
 /** Query key factory for tickets */
 export const ticketsKeys = {
   all: ["tickets"] as const,
-  my: (params?: { page?: number; limit?: number; status?: string }) =>
+  my: (params?: TicketListParams) =>
     [...ticketsKeys.all, "mine", params] as const,
-  list: (params?: {
-    page?: number;
-    limit?: number;
-    status?: string;
-    category?: string;
-    search?: string;
-  }) => [...ticketsKeys.all, "list", params] as const,
+  list: (params?: TicketListParams) =>
+    [...ticketsKeys.all, "list", params] as const,
   detail: (id: number) => [...ticketsKeys.all, "detail", id] as const,
 };
 
 /** Fetch "My tickets" (user's own). */
-export function useMyTickets(params?: {
-  page?: number;
-  limit?: number;
-  status?: string;
-  sortBy?: string;
-  sortOrder?: string;
-}) {
+export function useMyTickets(params?: TicketListParams) {
   const { token } = useAuth();
   return useQuery({
     queryKey: ticketsKeys.my(params),
@@ -51,15 +44,7 @@ export function useMyTickets(params?: {
 }
 
 /** Fetch all tickets (agent/admin list) with pagination. */
-export function useAllTickets(params?: {
-  page?: number;
-  limit?: number;
-  status?: string;
-  category?: string;
-  sortBy?: string;
-  sortOrder?: string;
-  search?: string;
-}) {
+export function useAllTickets(params?: TicketListParams) {
   const { token } = useAuth();
   return useQuery({
     queryKey: ticketsKeys.list(params),
@@ -68,11 +53,11 @@ export function useAllTickets(params?: {
   });
 }
 
-/** Fetch a single ticket by ID (detail view with draft). */
+/** Fetch a single ticket by ID (creator view; limited fields). GET /tickets/:id */
 export function useTicket(
   id: number,
   options?: Omit<
-    UseQueryOptions<TicketDetail, Error, TicketDetail, ReturnType<typeof ticketsKeys.detail>>,
+    UseQueryOptions<UserTicketDetail, Error, UserTicketDetail, ReturnType<typeof ticketsKeys.detail>>,
     "queryKey" | "queryFn"
   >
 ) {
@@ -86,47 +71,65 @@ export function useTicket(
   });
 }
 
+/** Fetch full ticket by ID (admin/agent). GET /agent/tickets/:id */
+export function useAgentTicket(
+  id: number,
+  options?: Omit<
+    UseQueryOptions<TicketDetail, Error, TicketDetail, ReturnType<typeof ticketsKeys.detail>>,
+    "queryKey" | "queryFn"
+  >
+) {
+  const { token } = useAuth();
+  const validId = Number.isFinite(id) && id > 0;
+  return useQuery({
+    queryKey: ticketsKeys.detail(id),
+    queryFn: () => getAgentTicket(id, token!),
+    enabled: !!token && validId,
+    ...options,
+  });
+}
+
 /** Create a new ticket. Invalidates "my tickets" list. */
 export function useCreateTicket(
   options?: UseMutationOptions<
-    Ticket,
+    UserTicketDetail,
     Error,
     { title: string; content: string }
   >
 ) {
   const queryClient = useQueryClient();
   const { token } = useAuth();
+  const { onSuccess: userOnSuccess, ...restOptions } = options ?? {};
 
   return useMutation({
     mutationFn: (body: { title: string; content: string }) =>
       createTicket(body, token),
-    onSuccess: (_data, _variables, context) => {
+    onSuccess: (data, variables, onMutateResult, context) => {
       queryClient.invalidateQueries({ queryKey: ticketsKeys.my() });
+      userOnSuccess?.(data, variables, onMutateResult, context);
     },
-    ...options,
+    ...restOptions,
   });
 }
 
 /** Update AI draft for a ticket. Invalidates that ticket detail and list. */
 export function useUpdateDraft(
   ticketId: number,
-  options?: UseMutationOptions<
-    { id: number; ticketId: number; aiReplyMessage: string },
-    Error,
-    string
-  >
+  options?: UseMutationOptions<TicketDetail, Error, string>
 ) {
   const queryClient = useQueryClient();
   const { token } = useAuth();
+  const { onSuccess: userOnSuccess, ...restOptions } = options ?? {};
 
   return useMutation({
     mutationFn: (draftReplyMessage: string) =>
       updateDraft(ticketId, draftReplyMessage, token),
-    onSuccess: (_data, _variables, context) => {
+    onSuccess: (data, variables, onMutateResult, context) => {
       queryClient.invalidateQueries({ queryKey: ticketsKeys.detail(ticketId) });
       queryClient.invalidateQueries({ queryKey: ticketsKeys.list() });
+      userOnSuccess?.(data, variables, onMutateResult, context);
     },
-    ...options,
+    ...restOptions,
   });
 }
 
@@ -137,14 +140,37 @@ export function useResolveTicket(
 ) {
   const queryClient = useQueryClient();
   const { token } = useAuth();
+  const { onSuccess: userOnSuccess, ...restOptions } = options ?? {};
 
   return useMutation({
     mutationFn: () => resolveTicket(ticketId, token),
-    onSuccess: (_data, _variables, context) => {
+    onSuccess: (data, variables, onMutateResult, context) => {
       queryClient.invalidateQueries({ queryKey: ticketsKeys.detail(ticketId) });
       queryClient.invalidateQueries({ queryKey: ticketsKeys.list() });
       queryClient.invalidateQueries({ queryKey: ticketsKeys.my() });
+      userOnSuccess?.(data, variables, onMutateResult, context);
     },
-    ...options,
+    ...restOptions,
+  });
+}
+
+/** Close ticket (creator only). Invalidates that ticket detail and lists. */
+export function useCloseTicket(
+  ticketId: number,
+  options?: UseMutationOptions<UserTicketDetail, Error, void>
+) {
+  const queryClient = useQueryClient();
+  const { token } = useAuth();
+  const { onSuccess: userOnSuccess, ...restOptions } = options ?? {};
+
+  return useMutation({
+    mutationFn: () => closeTicket(ticketId, token),
+    onSuccess: (data, variables, onMutateResult, context) => {
+      queryClient.invalidateQueries({ queryKey: ticketsKeys.detail(ticketId) });
+      queryClient.invalidateQueries({ queryKey: ticketsKeys.list() });
+      queryClient.invalidateQueries({ queryKey: ticketsKeys.my() });
+      userOnSuccess?.(data, variables, onMutateResult, context);
+    },
+    ...restOptions,
   });
 }

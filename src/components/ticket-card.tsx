@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { Ticket } from "@/lib/tickets-api";
-import { getStatusLabel, getStatusColorClass } from "@/lib/ticket-status";
+import { getStatusLabel, getStatusColorClass, getStatusBorderClass } from "@/lib/ticket-status";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -64,11 +64,14 @@ export interface TicketCardProps {
 
 export function TicketCard({ ticket, href, variant }: TicketCardProps) {
   const isAgent = variant === "agent";
+  const borderClass = isAgent
+    ? urgencyBorderClass(ticket.urgency)
+    : getStatusBorderClass(ticket.status);
 
   return (
     <Link
       href={href}
-      className={`block rounded-lg border border-border bg-card p-4 transition-colors duration-200 hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/20 ${urgencyBorderClass(ticket.urgency)}`}
+      className={`block rounded-lg border border-border bg-card p-4 transition-colors duration-200 hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/20 ${borderClass}`}
     >
       <div className="flex items-start justify-between gap-2">
         <h2 className="font-medium text-foreground line-clamp-1">
@@ -103,16 +106,6 @@ export function TicketCard({ ticket, href, variant }: TicketCardProps) {
       </p>
 
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground/80">
-        {!isAgent && ticket.urgency && (
-          <span>
-            Urgency:{" "}
-            <span
-              className={`font-medium capitalize ${urgencyColorClass(ticket.urgency)}`}
-            >
-              {ticket.urgency.toLowerCase()}
-            </span>
-          </span>
-        )}
         <span className="uppercase tracking-wider">
           {formatDate(ticket.createdAt)}
         </span>

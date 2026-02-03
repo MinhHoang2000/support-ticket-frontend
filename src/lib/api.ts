@@ -1,7 +1,8 @@
 import axios, { type AxiosRequestConfig } from "axios";
 
 /**
- * API base URL. Use NEXT_PUBLIC_API_URL for full origin (e.g. https://api.example.com/api/v1)
+ * API base URL: /api/v1.
+ * Use NEXT_PUBLIC_API_URL for full origin (e.g. https://api.example.com/api/v1)
  * or leave unset to use same-origin /api/v1.
  */
 const getBaseUrl = (): string => {
@@ -52,7 +53,11 @@ export async function apiRequest<T>(
     return res.data;
   } catch (err) {
     if (axios.isAxiosError(err) && err.response) {
-      const data = err.response.data as { message?: string; errorCode?: string } | undefined;
+      // API error shape: { success: false, message, errorCode, timestamp }; use errorCode for UX (e.g. VALIDATION_ERROR, UNAUTHORIZED, FORBIDDEN, NOT_FOUND).
+      const data = err.response.data as {
+        message?: string;
+        errorCode?: string;
+      } | undefined;
       const message =
         typeof data?.message === "string" ? data.message : err.message;
       const apiErr = new Error(message) as Error & {

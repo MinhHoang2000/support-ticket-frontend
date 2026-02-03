@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { AppInput, AppTextArea } from "@/components/ui";
 import { useAuth } from "@/contexts/auth-context";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { useCreateTicket } from "@/lib/tickets-queries";
@@ -88,14 +89,14 @@ export default function CreateTicketPage() {
             >
               Title
             </label>
-            <input
+            <AppInput
               id="create-ticket-title"
               type="text"
               required
               maxLength={TITLE_MAX}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-foreground transition-colors duration-200 placeholder:text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-border"
+              className="mt-1 w-full"
               placeholder="Brief summary of your issue"
               disabled={loading}
             />
@@ -110,14 +111,14 @@ export default function CreateTicketPage() {
             >
               Content
             </label>
-            <textarea
+            <AppTextArea
               id="create-ticket-content"
               required
               maxLength={CONTENT_MAX}
               rows={8}
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="mt-1 w-full resize-y rounded-lg border border-border bg-background px-3 py-2.5 text-foreground transition-colors duration-200 placeholder:text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-border"
+              className="mt-1 w-full"
               placeholder="Describe your complaint or request in detail..."
               disabled={loading}
             />

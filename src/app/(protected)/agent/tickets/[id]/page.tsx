@@ -1,10 +1,12 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { AppTextArea } from "@/components/ui";
 import {
-  useTicket,
+  useAgentTicket,
   useUpdateDraft,
   useResolveTicket,
 } from "@/lib/tickets-queries";
@@ -68,7 +70,7 @@ export default function AgentTicketDetailPage() {
     isLoading: loading,
     isError: isQueryError,
     error: queryError,
-  } = useTicket(id);
+  } = useAgentTicket(id);
 
   const updateDraftMutation = useUpdateDraft(id, {
     onSuccess: () => {
@@ -84,7 +86,6 @@ export default function AgentTicketDetailPage() {
     onSuccess: () => {
       setResolveSuccess(true);
       toastSuccess("Ticket resolved");
-      setTimeout(() => setResolveSuccess(false), 3000);
     },
     onError: (err) => {
       const msg =
@@ -117,9 +118,12 @@ export default function AgentTicketDetailPage() {
   };
 
   const isResolved =
-    ticket?.status === "RESOLVED" || ticket?.status === "CLOSED";
+    ticket?.status === "RESOLVED" ||
+    ticket?.status === "CLOSED" ||
+    resolveSuccess;
   const canEditDraft =
-    ticket?.status === "OPEN" || ticket?.status === "IN_PROGRESS";
+    (ticket?.status === "OPEN" || ticket?.status === "IN_PROGRESS") &&
+    !resolveSuccess;
   const savingDraft = updateDraftMutation.isPending;
   const resolving = resolveTicketMutation.isPending;
 
@@ -134,7 +138,7 @@ export default function AgentTicketDetailPage() {
             Only agents and admins can view this ticket.
           </p>
           <Link
-            href="/tickets/agent"
+            href="/agent/tickets/dashboard"
             className="mt-4 inline-block cursor-pointer rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
             Back to Agent Dashboard
@@ -159,7 +163,7 @@ export default function AgentTicketDetailPage() {
           {error}
         </p>
         <Link
-          href="/tickets/agent"
+          href="/agent/tickets/dashboard"
           className="mt-4 inline-block cursor-pointer text-sm text-primary transition-colors duration-200 hover:text-primary-hover"
         >
           Back to Agent Dashboard
@@ -173,7 +177,7 @@ export default function AgentTicketDetailPage() {
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <p className="text-muted">Ticket not found.</p>
         <Link
-          href="/tickets/agent"
+          href="/agent/tickets/dashboard"
           className="mt-4 inline-block cursor-pointer text-sm text-primary transition-colors duration-200 hover:text-primary-hover"
         >
           Back to Agent Dashboard
@@ -186,7 +190,7 @@ export default function AgentTicketDetailPage() {
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Link
-          href="/tickets/agent"
+          href="/agent/tickets/dashboard"
           className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-muted transition-colors duration-200 hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
         >
           <BackIcon className="h-5 w-5" />
@@ -251,13 +255,13 @@ export default function AgentTicketDetailPage() {
             Edit the draft below and save. When ready, click Resolve to mark the
             ticket resolved.
           </p>
-          <textarea
+          <AppTextArea
             id="agent-draft"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             disabled={!canEditDraft}
             rows={12}
-            className="mt-2 w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
+            className="mt-2 w-full px-4 py-3 text-sm disabled:opacity-60"
             placeholder="AI-generated reply draft…"
             aria-label="AI reply draft"
           />
@@ -285,17 +289,20 @@ export default function AgentTicketDetailPage() {
           <p className="mt-1 text-sm text-muted">
             Mark this ticket as resolved.
           </p>
-          <button
-            type="button"
-            onClick={handleResolve}
-            disabled={resolving || isResolved}
-            className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg bg-cta px-4 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-cta-hover disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-cta/20"
-          >
-            <CheckIcon className="h-5 w-5" />
-            {resolving ? "Resolving…" : isResolved ? "Resolved" : "Resolve"}
-          </button>
-          {resolveSuccess && (
-            <span className="ml-3 text-sm text-cta">Ticket resolved.</span>
+          {!isResolved ? (
+            <button
+              type="button"
+              onClick={handleResolve}
+              disabled={resolving}
+              className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg bg-cta px-4 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-cta-hover disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-cta/20"
+            >
+              <CheckIcon className="h-5 w-5" />
+              {resolving ? "Resolving…" : "Resolve"}
+            </button>
+          ) : (
+            <span className="mt-3 inline-block text-sm text-cta">
+              Ticket resolved.
+            </span>
           )}
         </section>
       </article>
