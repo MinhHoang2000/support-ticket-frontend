@@ -11,6 +11,7 @@ import {
 } from "react";
 import type { User } from "@/types/auth";
 import * as authApi from "@/lib/auth-api";
+import { toastError } from "@/lib/toast";
 
 const STORAGE_KEY = "tickets_auth";
 
@@ -61,11 +62,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const stored = readStored();
-    if (stored) {
-      setUser(stored.user);
-      setToken(stored.token);
-    }
-    setIsReady(true);
+    const run = () => {
+      if (stored) {
+        setUser(stored.user);
+        setToken(stored.token);
+      }
+      setIsReady(true);
+    };
+    queueMicrotask(run);
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -91,7 +95,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     try {
       await authApi.logout(token);
-    } catch {
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Logout failed");
       // still clear local state
     }
     clearStored();

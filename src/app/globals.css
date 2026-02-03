@@ -11,6 +11,7 @@
   --cta-hover: #059669;
   --muted: #475569;
   --border: #E2E8F0;
+  --destructive: #DC2626;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,6 +20,7 @@
     --foreground: #E2E8F0;
     --border: #334155;
     --muted: #94A3B8;
+    --destructive: #EF4444;
   }
 }
 
@@ -32,6 +34,7 @@
   --color-cta-hover: var(--cta-hover);
   --color-muted: var(--muted);
   --color-border: var(--border);
+  --color-destructive: var(--destructive);
   --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
 }

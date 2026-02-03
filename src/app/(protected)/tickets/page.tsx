@@ -1,9 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { TicketCard } from "@/components/ticket-card";
 import { useAuth } from "@/contexts/auth-context";
+import { toastError } from "@/lib/toast";
+import { fetchMyTickets, type Ticket } from "@/lib/tickets-api";
 
-function LogoutIcon({ className }: { className?: string }) {
+function PlusIcon({ className }: { className?: string }) {
   return (
     <svg
       className={className}
@@ -16,50 +20,96 @@ function LogoutIcon({ className }: { className?: string }) {
       strokeLinejoin="round"
       aria-hidden
     >
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-      <polyline points="16 17 21 12 16 7" />
-      <line x1="21" x2="9" y1="12" y2="12" />
+      <path d="M5 12h14" />
+      <path d="M12 5v14" />
     </svg>
   );
 }
 
 export default function TicketsPage() {
-  const { user, logout } = useAuth();
+  const { token } = useAuth();
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!token) {
+      queueMicrotask(() => setLoading(false));
+      return;
+    }
+    let cancelled = false;
+    queueMicrotask(() => {
+      setLoading(true);
+      setError(null);
+    });
+    fetchMyTickets(token)
+      .then((data) => {
+        if (!cancelled) {
+          setTickets(data.tickets);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          const msg = err instanceof Error ? err.message : "Failed to load tickets";
+          setError(msg);
+          toastError(msg);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 border-b border-border bg-white/90 backdrop-blur dark:bg-foreground/5">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <Link
-            href="/tickets"
-            className="text-lg font-semibold text-foreground transition-colors duration-200 hover:text-primary"
-          >
-            Tickets
-          </Link>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted">
-              {user?.firstName} {user?.lastName}
-            </span>
-            <button
-              type="button"
-              onClick={() => logout()}
-              className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted transition-colors duration-200 hover:bg-border hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-              aria-label="Sign out"
-            >
-              <LogoutIcon className="h-5 w-5" />
-              Sign out
-            </button>
-          </div>
+    <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">
+            Support tickets
+          </h1>
+          <p className="mt-1 text-muted">
+            Your support tickets and requests.
+          </p>
         </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        <h1 className="text-2xl font-semibold text-foreground">
-          Support tickets
-        </h1>
-        <p className="mt-1 text-muted">
-          You are signed in. Ticket list and actions will go here.
+        <Link
+          href="/tickets/create-ticket"
+          className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-cta px-4 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-cta-hover focus:outline-none focus:ring-2 focus:ring-cta focus:ring-offset-2"
+        >
+          <PlusIcon className="h-5 w-5" />
+          Create ticket
+        </Link>
+      </div>
+
+      {loading && (
+        <p className="mt-6 text-muted">Loading tickets…</p>
+      )}
+
+      {error && (
+        <p className="mt-6 text-destructive" role="alert">
+          {error}
         </p>
-      </main>
-    </div>
+      )}
+
+      {!loading && !error && tickets.length === 0 && (
+        <p className="mt-6 text-muted">You have no tickets yet.</p>
+      )}
+
+      {!loading && !error && tickets.length > 0 && (
+        <ul className="mt-6 grid gap-3 sm:grid-cols-1 lg:grid-cols-2">
+          {tickets.map((ticket) => (
+            <li key={ticket.id}>
+              <TicketCard
+                ticket={ticket}
+                href={`/tickets/${ticket.id}`}
+                variant="user"
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+    </main>
   );
 }

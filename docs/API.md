@@ -29,16 +29,16 @@ All responses are JSON. Success responses use the shape below unless noted.
 }
 ```
 
-**Common `errorCode` values:** `VALIDATION_ERROR`, `UNAUTHORIZED`, `NOT_FOUND`, `BAD_REQUEST`, `CONFLICT`, `INTERNAL_ERROR`, `RATE_LIMIT_EXCEEDED`, `SERVICE_UNAVAILABLE`.
+**Common `errorCode` values:** `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `BAD_REQUEST`, `CONFLICT`, `INTERNAL_ERROR`, `RATE_LIMIT_EXCEEDED`, `SERVICE_UNAVAILABLE`.
 
 ---
 
 ## Authentication
 
-- **Protected routes** (tickets, health) require:  
-  `Authorization: Bearer <JWT>`
+- **All API endpoints** require authentication except signup, login, logout, and health.
+- Send: `Authorization: Bearer <JWT>` on every request to tickets.
 - **Auth routes** (signup, login, logout) do **not** require a token.
-- After login, send the returned `token` in the `Authorization` header for all ticket and health requests.
+- After login, send the returned `token` in the `Authorization` header for all other requests.
 - Logout: call `POST /auth/logout` (optionally with the current Bearer token). The client should then discard the token.
 
 ---
@@ -125,17 +125,21 @@ No body. **200** – Logged out; client should discard the token.
 All ticket endpoints require **`Authorization: Bearer <JWT>`**.  
 Create-ticket and list endpoints are rate-limited (see below).
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/tickets` | List tickets (paginated, filterable, sortable) |
-| `GET` | `/api/v1/tickets/:id` | Get one ticket by ID |
-| `POST` | `/api/v1/tickets` | Create a ticket |
-| `PATCH` | `/api/v1/tickets/:id/draft` | Update AI draft (ai_reply_message) |
-| `DELETE` | `/api/v1/tickets/:id` | Delete a ticket |
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/v1/tickets` | **Admin or Agent** | List all tickets (paginated, filterable, sortable) |
+| `GET` | `/api/v1/tickets/mine` | Yes | List current user's tickets (same query params as list) |
+| `GET` | `/api/v1/tickets/:id` | Yes | Get one ticket by ID |
+| `POST` | `/api/v1/tickets` | Yes | Create a ticket (associated with current user) |
+| `PATCH` | `/api/v1/tickets/:id/draft` | Yes | Update AI draft while ticket is OPEN/IN_PROGRESS |
+| `POST` | `/api/v1/tickets/:id/resolve` | Yes | Copy draft into response and mark RESOLVED |
+| `DELETE` | `/api/v1/tickets/:id` | Yes | Delete a ticket |
 
 **Create ticket rate limit:** 20 requests per minute per IP.
 
-#### GET `/api/v1/tickets`
+#### GET `/api/v1/tickets` (admin or agent)
+
+Returns all tickets. Requires user to have **admin** or **agent** role. Returns **403 Forbidden** if the user has neither role.
 
 **Query parameters**
 
@@ -181,12 +185,23 @@ Create-ticket and list endpoints are rate-limited (see below).
 }
 ```
 
-Ticket list items match DB shape; color-coding by urgency can be done on the frontend.  
-**400** – Invalid `page`, `limit`, `status`, `sortBy`, `sortOrder`, or `sentiment`.
+Ticket list items match DB shape; color-coding by urgency can be done in the frontend. The `tag` field may include triage outcome tags set by the worker after AI triage: `AI_TRIAGE_DONE` (no error, result applied), `AI_TRIAGE_NO_RESULT` (no error, invalid/no result), `AI_TRIAGE_ERROR` (triage threw an error). Multiple tags are comma-separated.  
+**400** – Invalid `page`, `limit`, `status`, `sortBy`, `sortOrder`, or `sentiment`.  
+**401** – Missing or invalid token. **403** – User is not admin or agent.
+
+#### GET `/api/v1/tickets/mine`
+
+Returns tickets belonging to the **authenticated user** (based on the Bearer token). Same query parameters and response shape as `GET /api/v1/tickets`. Only tickets created by the current user (or linked to their account) are returned.
+
+**Query parameters:** Same as `GET /api/v1/tickets` (`page`, `limit`, `status`, `category`, `sentiment`, `urgency`, `sortBy`, `sortOrder`, `search`).
+
+**Response (200):** Same shape as `GET /api/v1/tickets` (`tickets`, `total`, `page`, `limit`, `totalPages`).
+
+**401** – Missing or invalid token. **400** – Validation error on query params.
 
 #### GET `/api/v1/tickets/:id`
 
-**Response (200)** – Single ticket (full detail, same fields as list plus `responseDraft`, `replyMadeBy` as in schema).
+**Response (200)** – Single ticket (full detail, same fields as list plus `responseDraft`, `response`, `replyMadeBy` as in schema).
 
 **400** – Invalid ID. **404** – Ticket not found.
 
@@ -205,17 +220,32 @@ Ticket list items match DB shape; color-coding by urgency can be done on the fro
 
 #### PATCH `/api/v1/tickets/:id/draft`
 
-Updates only the AI draft (`ai_reply_message`) for the latest worker process for this ticket.
+Updates only the ticket's AI response draft. Drafts can be changed **only while the ticket status is `OPEN` or `IN_PROGRESS`**; attempts to edit drafts on other statuses return `400 Bad Request`.
 
 **Request body**
 
 | Field | Type | Required | Constraints |
 |-------|------|----------|-------------|
-| `aiReplyMessage` | string | Yes | Max 50,000 characters |
+| `draftReplyMessage` | string | Yes | Max 50,000 characters |
 
-**Response (200)** – `data`: updated worker process (includes `id`, `ticketId`, `aiReplyMessage`, etc.).
+**Response (200)** – `data`: updated ticket (includes latest draft + metadata).
 
-**400** – Invalid ticket ID or validation error. **404** – Ticket or worker process not found.
+**400** – Invalid ID, validation error, or ticket status not editable. **404** – Ticket not found.
+
+#### POST `/api/v1/tickets/:id/resolve`
+
+Copies the current `responseDraft` into `response` and marks the ticket as `RESOLVED`.  
+Requirements:
+
+1. Ticket must exist and be `IN_PROGRESS`.
+2. `responseDraft` must be non-empty (after trimming).
+
+No request body is required.
+
+**Response (200)** – `data`: updated ticket (status `RESOLVED`, `response` now matches the draft).
+
+**400** – Invalid ID, ticket not `IN_PROGRESS`, or draft missing/empty.  
+**404** – Ticket not found.
 
 #### DELETE `/api/v1/tickets/:id`
 
@@ -228,12 +258,14 @@ Updates only the AI draft (`ai_reply_message`) for the latest worker process for
 ## Ticket and enum reference
 
 **Ticket status:** `OPEN` | `IN_PROGRESS` | `RESOLVED` | `CLOSED`  
+Tickets start as `OPEN`, move to `IN_PROGRESS` automatically after AI triage, and can be marked `RESOLVED` via `POST /api/v1/tickets/:id/resolve`. `CLOSED` remains available for post-resolution workflows.
 
 **Reply origin:** `AI` | `HUMAN_AI` (who last produced the reply: AI only vs human-edited AI)
 
 **Ticket object (detail)** – Fields as in list, plus:
 
 - `responseDraft` (string | null) – AI-generated response draft (detail view).
+- `response` (string | null) – Reply sent to the user.
 - `replyMadeBy` (`AI` | `HUMAN_AI` | null).
 
 ---
@@ -248,7 +280,7 @@ Updates only the AI draft (`ai_reply_message`) for the latest worker process for
 ## Quick checklist for frontend
 
 1. **Base URL:** `/api/v1` (or full origin, e.g. `https://api.example.com/api/v1`).
-2. **Auth:** After login, set `Authorization: Bearer <token>` on all requests to `/api/v1/tickets` and `/api/v1/health`.
+2. **Auth:** All endpoints except signup/login/logout/health require `Authorization: Bearer <token>` (all `/api/v1/tickets` endpoints). Use `GET /api/v1/tickets/mine` for the current user's tickets; use `GET /api/v1/tickets` only for admin users (403 if not admin).
 3. **Errors:** Check `success === false`, use `message` and `errorCode` for UX; use HTTP status for retries/redirects (e.g. 401 → re-login).
 4. **Pagination:** `GET /tickets` returns `tickets`, `total`, `page`, `limit`, `totalPages`.
 5. **Validation:** Use the same constraints (lengths, enums) as in this doc to avoid 400s.
