@@ -1,63 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { TicketCard } from "@/components/ticket-card";
 import { useAuth } from "@/contexts/auth-context";
-import { toastError } from "@/lib/toast";
-import {
-  fetchAllTickets,
-  type Ticket,
-} from "@/lib/tickets-api";
+import { useAllTickets } from "@/lib/tickets-queries";
+import type { Ticket } from "@/lib/tickets-api";
 
 export default function AgentDashboardPage() {
   const { token } = useAuth();
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [accessDenied, setAccessDenied] = useState(false);
+  const { data, isLoading, isError, error } = useAllTickets({
+    page,
+    limit: 20,
+  });
 
-  useEffect(() => {
-    if (!token) {
-      queueMicrotask(() => setLoading(false));
-      return;
-    }
-    let cancelled = false;
-    queueMicrotask(() => {
-      setLoading(true);
-      setError(null);
-      setAccessDenied(false);
-    });
-    fetchAllTickets(token, { page, limit: 20 })
-      .then((data) => {
-        if (!cancelled) {
-          setTickets(data.tickets);
-          setTotal(data.total);
-          setTotalPages(data.totalPages);
-        }
-      })
-      .catch((err: Error & { status?: number; errorCode?: string }) => {
-        if (!cancelled) {
-          if (err.status === 403 || err.errorCode === "FORBIDDEN") {
-            setAccessDenied(true);
-            setTickets([]);
-          } else {
-            const msg = err.message ?? "Failed to load tickets";
-            setError(msg);
-            toastError(msg);
-          }
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [token, page]);
+  const tickets: Ticket[] = data?.tickets ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = data?.totalPages ?? 0;
+  const err = error as Error & { status?: number; errorCode?: string } | undefined;
+  const accessDenied =
+    isError && err && (err.status === 403 || err.errorCode === "FORBIDDEN");
+  const errorMessage =
+    isError && !accessDenied && err
+      ? err.message ?? "Failed to load tickets"
+      : null;
 
   if (accessDenied) {
     return (
@@ -99,21 +66,25 @@ export default function AgentDashboardPage() {
         </Link>
       </div>
 
-      {loading && (
+      {!token && (
+        <p className="mt-6 text-muted">Sign in to view the dashboard.</p>
+      )}
+
+      {token && isLoading && (
         <p className="mt-6 text-muted">Loading tickets…</p>
       )}
 
-      {error && (
+      {token && errorMessage && (
         <p className="mt-6 text-destructive" role="alert">
-          {error}
+          {errorMessage}
         </p>
       )}
 
-      {!loading && !error && tickets.length === 0 && (
+      {token && !isLoading && !errorMessage && tickets.length === 0 && (
         <p className="mt-6 text-muted">No tickets yet.</p>
       )}
 
-      {!loading && !error && tickets.length > 0 && (
+      {token && !isLoading && !errorMessage && tickets.length > 0 && (
         <>
           <ul className="mt-6 grid gap-3 sm:grid-cols-1 lg:grid-cols-2">
             {tickets.map((ticket) => (

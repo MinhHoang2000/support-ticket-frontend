@@ -1,15 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/auth-context";
 import {
-  getTicket,
-  updateDraft,
-  resolveTicket,
-  type TicketDetail,
-} from "@/lib/tickets-api";
+  useTicket,
+  useUpdateDraft,
+  useResolveTicket,
+} from "@/lib/tickets-queries";
 import { getStatusLabel, getStatusColorClass } from "@/lib/ticket-status";
 import { toastError, toastSuccess } from "@/lib/toast";
 
@@ -60,90 +58,70 @@ function CheckIcon({ className }: { className?: string }) {
 
 export default function AgentTicketDetailPage() {
   const params = useParams();
-  const { token } = useAuth();
   const id = typeof params.id === "string" ? parseInt(params.id, 10) : NaN;
-  const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [draft, setDraft] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [accessDenied, setAccessDenied] = useState(false);
-  const [savingDraft, setSavingDraft] = useState(false);
-  const [resolving, setResolving] = useState(false);
   const [saveDraftSuccess, setSaveDraftSuccess] = useState(false);
   const [resolveSuccess, setResolveSuccess] = useState(false);
 
-  useEffect(() => {
-    if (!token || Number.isNaN(id)) {
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    setAccessDenied(false);
-    getTicket(id, token)
-      .then((t) => {
-        if (!cancelled) {
-          setTicket(t);
-          setDraft(t.responseDraft ?? "");
-        }
-      })
-      .catch((err: Error & { status?: number; errorCode?: string }) => {
-        if (!cancelled) {
-          if (err.status === 403 || err.errorCode === "FORBIDDEN") {
-            setAccessDenied(true);
-          } else {
-            const msg = err.message ?? "Failed to load ticket";
-            setError(msg);
-            toastError(msg);
-          }
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [token, id]);
+  const {
+    data: ticket,
+    isLoading: loading,
+    isError: isQueryError,
+    error: queryError,
+  } = useTicket(id);
 
-  const handleSaveDraft = async () => {
-    if (!token || Number.isNaN(id)) return;
-    setSavingDraft(true);
-    setSaveDraftSuccess(false);
-    try {
-      await updateDraft(id, draft, token);
+  const updateDraftMutation = useUpdateDraft(id, {
+    onSuccess: () => {
       setSaveDraftSuccess(true);
       setTimeout(() => setSaveDraftSuccess(false), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save draft");
-    } finally {
-      setSavingDraft(false);
-    }
-  };
+    },
+    onError: (err) => {
+      toastError(err instanceof Error ? err.message : "Failed to save draft");
+    },
+  });
 
-  const handleResolve = async () => {
-    if (!token || Number.isNaN(id)) return;
-    setResolving(true);
-    setError(null);
-    try {
-      const updated = await resolveTicket(id, token);
-      setTicket(updated);
-      setDraft(updated.responseDraft ?? "");
+  const resolveTicketMutation = useResolveTicket(id, {
+    onSuccess: () => {
       setResolveSuccess(true);
       toastSuccess("Ticket resolved");
       setTimeout(() => setResolveSuccess(false), 3000);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to resolve ticket";
-      setError(msg);
+    },
+    onError: (err) => {
+      const msg =
+        err instanceof Error ? err.message : "Failed to resolve ticket";
       toastError(msg);
-    } finally {
-      setResolving(false);
-    }
+    },
+  });
+
+  useEffect(() => {
+    if (ticket?.responseDraft != null) setDraft(ticket.responseDraft);
+    else if (ticket) setDraft("");
+  }, [ticket?.id, ticket?.responseDraft]);
+
+  const err = queryError as Error & { status?: number; errorCode?: string } | undefined;
+  const accessDenied =
+    isQueryError && err && (err.status === 403 || err.errorCode === "FORBIDDEN");
+  const error =
+    isQueryError && !accessDenied && err
+      ? err.message ?? "Failed to load ticket"
+      : null;
+
+  const handleSaveDraft = () => {
+    if (Number.isNaN(id)) return;
+    updateDraftMutation.mutate(draft);
   };
 
-  const isResolved = ticket?.status === "RESOLVED" || ticket?.status === "CLOSED";
-  const canEditDraft = ticket?.status === "OPEN" || ticket?.status === "IN_PROGRESS";
+  const handleResolve = () => {
+    if (Number.isNaN(id)) return;
+    resolveTicketMutation.mutate();
+  };
+
+  const isResolved =
+    ticket?.status === "RESOLVED" || ticket?.status === "CLOSED";
+  const canEditDraft =
+    ticket?.status === "OPEN" || ticket?.status === "IN_PROGRESS";
+  const savingDraft = updateDraftMutation.isPending;
+  const resolving = resolveTicketMutation.isPending;
 
   if (accessDenied) {
     return (
@@ -216,9 +194,13 @@ export default function AgentTicketDetailPage() {
         </Link>
       </div>
 
-      {error && (
-        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-200" role="alert">
-          {error}
+      {(updateDraftMutation.isError || resolveTicketMutation.isError) && (
+        <p
+          className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-200"
+          role="alert"
+        >
+          {updateDraftMutation.error?.message ??
+            resolveTicketMutation.error?.message}
         </p>
       )}
 
@@ -234,30 +216,40 @@ export default function AgentTicketDetailPage() {
           </span>
         </div>
         <p className="mt-2 text-[11px] uppercase tracking-wider text-muted-foreground/80">
-          Created {formatDate(ticket.createdAt)} · Updated {formatDate(ticket.updatedAt)}
+          Created {formatDate(ticket.createdAt)} · Updated{" "}
+          {formatDate(ticket.updatedAt)}
         </p>
         {ticket.urgency && (
           <p className="mt-1 text-sm text-muted">
-            Urgency: <span className="font-medium text-foreground">{ticket.urgency}</span>
+            Urgency:{" "}
+            <span className="font-medium text-foreground">{ticket.urgency}</span>
           </p>
         )}
         {ticket.sentiment != null && (
           <p className="mt-1 text-sm text-muted">
-            Sentiment: <span className="font-medium text-foreground">{ticket.sentiment}</span>
+            Sentiment:{" "}
+            <span className="font-medium text-foreground">
+              {ticket.sentiment}
+            </span>
           </p>
         )}
 
         <section className="mt-6">
-          <h2 className="text-lg font-medium text-foreground">Customer message</h2>
+          <h2 className="text-lg font-medium text-foreground">
+            Customer message
+          </h2>
           <div className="mt-2 rounded-lg border border-border bg-background/50 p-4 text-sm text-muted">
             {ticket.content}
           </div>
         </section>
 
         <section className="mt-6">
-          <h2 className="text-lg font-medium text-foreground">AI draft (editable)</h2>
+          <h2 className="text-lg font-medium text-foreground">
+            AI draft (editable)
+          </h2>
           <p className="mt-1 text-sm text-muted">
-            Edit the draft below and save. When ready, click Resolve to mark the ticket resolved.
+            Edit the draft below and save. When ready, click Resolve to mark the
+            ticket resolved.
           </p>
           <textarea
             id="agent-draft"
@@ -287,7 +279,9 @@ export default function AgentTicketDetailPage() {
         </section>
 
         <section className="mt-6 border-t border-border pt-6">
-          <h2 className="text-lg font-medium text-foreground">Resolve ticket</h2>
+          <h2 className="text-lg font-medium text-foreground">
+            Resolve ticket
+          </h2>
           <p className="mt-1 text-sm text-muted">
             Mark this ticket as resolved.
           </p>

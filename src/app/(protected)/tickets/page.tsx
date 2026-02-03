@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { TicketCard } from "@/components/ticket-card";
 import { useAuth } from "@/contexts/auth-context";
-import { toastError } from "@/lib/toast";
-import { fetchMyTickets, type Ticket } from "@/lib/tickets-api";
+import { useMyTickets } from "@/lib/tickets-queries";
+import type { Ticket } from "@/lib/tickets-api";
 
 function PlusIcon({ className }: { className?: string }) {
   return (
@@ -28,40 +27,15 @@ function PlusIcon({ className }: { className?: string }) {
 
 export default function TicketsPage() {
   const { token } = useAuth();
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading, isError, error } = useMyTickets();
 
-  useEffect(() => {
-    if (!token) {
-      queueMicrotask(() => setLoading(false));
-      return;
-    }
-    let cancelled = false;
-    queueMicrotask(() => {
-      setLoading(true);
-      setError(null);
-    });
-    fetchMyTickets(token)
-      .then((data) => {
-        if (!cancelled) {
-          setTickets(data.tickets);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          const msg = err instanceof Error ? err.message : "Failed to load tickets";
-          setError(msg);
-          toastError(msg);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
+  const tickets: Ticket[] = data?.tickets ?? [];
+  const errorMessage =
+    isError && error
+      ? error instanceof Error
+        ? error.message
+        : "Failed to load tickets"
+      : null;
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -83,21 +57,25 @@ export default function TicketsPage() {
         </Link>
       </div>
 
-      {loading && (
+      {!token && (
+        <p className="mt-6 text-muted">Sign in to view your tickets.</p>
+      )}
+
+      {token && isLoading && (
         <p className="mt-6 text-muted">Loading tickets…</p>
       )}
 
-      {error && (
+      {token && errorMessage && (
         <p className="mt-6 text-destructive" role="alert">
-          {error}
+          {errorMessage}
         </p>
       )}
 
-      {!loading && !error && tickets.length === 0 && (
+      {token && !isLoading && !errorMessage && tickets.length === 0 && (
         <p className="mt-6 text-muted">You have no tickets yet.</p>
       )}
 
-      {!loading && !error && tickets.length > 0 && (
+      {token && !isLoading && !errorMessage && tickets.length > 0 && (
         <ul className="mt-6 grid gap-3 sm:grid-cols-1 lg:grid-cols-2">
           {tickets.map((ticket) => (
             <li key={ticket.id}>

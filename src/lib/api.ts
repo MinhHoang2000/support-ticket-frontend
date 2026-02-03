@@ -1,3 +1,5 @@
+import axios, { type AxiosRequestConfig } from "axios";
+
 /**
  * API base URL. Use NEXT_PUBLIC_API_URL for full origin (e.g. https://api.example.com/api/v1)
  * or leave unset to use same-origin /api/v1.
@@ -15,38 +17,52 @@ const getBaseUrl = (): string => {
 
 export const API_BASE = getBaseUrl();
 
-export interface RequestOptions extends RequestInit {
+const api = axios.create({
+  baseURL: API_BASE,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+export interface RequestOptions extends Omit<AxiosRequestConfig, "url" | "baseURL"> {
   /** If set, adds Authorization: Bearer <token> */
   token?: string | null;
+  /** Request body (mapped to axios `data` for compatibility with fetch-style usage) */
+  body?: BodyInit | null;
 }
 
 export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {}
 ): Promise<T> {
-  const { token, headers: optHeaders, ...rest } = options;
-  const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-    ...(optHeaders as HeadersInit),
+  const { token, headers: optHeaders, body, ...rest } = options;
+  const headers = {
+    ...optHeaders,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
-  if (token) {
-    (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
-  }
-  const res = await fetch(url, { ...rest, headers });
-  const json = await res.json().catch(() => ({}));
+  const data = body !== undefined ? body : rest.data;
 
-  if (!res.ok) {
-    const message =
-      typeof json?.message === "string" ? json.message : res.statusText;
-    const err = new Error(message) as Error & {
-      status: number;
-      errorCode?: string;
-    };
-    err.status = res.status;
-    err.errorCode = json?.errorCode;
+  try {
+    const res = await api.request<T>({
+      ...rest,
+      url: path,
+      headers,
+      ...(data !== undefined ? { data } : {}),
+    });
+    return res.data;
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      const data = err.response.data as { message?: string; errorCode?: string } | undefined;
+      const message =
+        typeof data?.message === "string" ? data.message : err.message;
+      const apiErr = new Error(message) as Error & {
+        status: number;
+        errorCode?: string;
+      };
+      apiErr.status = err.response.status;
+      apiErr.errorCode = data?.errorCode;
+      throw apiErr;
+    }
     throw err;
   }
-
-  return json as T;
 }
