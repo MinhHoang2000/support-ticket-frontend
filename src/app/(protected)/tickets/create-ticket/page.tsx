@@ -126,17 +126,17 @@ export default function CreateTicketPage() {
               {content.length} / {CONTENT_MAX}
             </p>
           </div>
-          <div className="flex gap-3 pt-2">
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
             <button
               type="submit"
               disabled={loading}
-              className="cursor-pointer rounded-lg bg-cta px-4 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-cta-hover focus:outline-none focus:ring-2 focus:ring-cta focus:ring-offset-2 disabled:opacity-60"
+              className="w-full cursor-pointer rounded-lg bg-cta px-4 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-cta-hover focus:outline-none focus:ring-2 focus:ring-cta focus:ring-offset-2 disabled:opacity-60 sm:w-auto"
             >
               {loading ? "Creating…" : "Create ticket"}
             </button>
             <Link
               href="/tickets"
-              className="inline-flex cursor-pointer items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors duration-200 hover:bg-border focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2"
+              className="inline-flex w-full cursor-pointer items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors duration-200 hover:bg-border focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2 sm:w-auto"
             >
               Cancel
             </Link>

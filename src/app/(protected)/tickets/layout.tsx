@@ -1,5 +1,4 @@
 import { ProtectedRoute } from "@/components/protected-route";
-import { TicketsHeader } from "@/components/tickets-header";
 
 export default function TicketsLayout({
   children,
@@ -8,10 +7,7 @@ export default function TicketsLayout({
 }) {
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-background">
-        <TicketsHeader />
-        {children}
-      </div>
+      <div className="min-h-full bg-background">{children}</div>
     </ProtectedRoute>
   );
 }
