@@ -7,9 +7,45 @@ import { Toaster } from "sonner";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://tickets.example.com";
+
 export const metadata: Metadata = {
-  title: "Tickets — Support Dashboard",
-  description: "Manage support tickets and responses",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Tickets — Support Ticket Management & Dashboard",
+    template: "%s | Tickets",
+  },
+  description:
+    "Manage support tickets in one place. Create, track, and respond to customer requests from a simple dashboard. Built for teams who want support done right.",
+  keywords: [
+    "support tickets",
+    "ticket management",
+    "customer support",
+    "help desk",
+    "support dashboard",
+  ],
+  authors: [{ name: "Tickets" }],
+  creator: "Tickets",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "Tickets",
+    title: "Tickets — Support Ticket Management & Dashboard",
+    description:
+      "Manage support tickets in one place. Create, track, and respond to customer requests from a simple dashboard.",
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tickets — Support Ticket Management & Dashboard",
+    description:
+      "Manage support tickets in one place. Create, track, and respond to customer requests from a simple dashboard.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
 };
 
 export default function RootLayout({

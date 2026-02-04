@@ -110,7 +110,10 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
       {/* Hero */}
-      <section className="relative overflow-hidden px-4 pt-16 pb-24 sm:px-6 sm:pt-24 sm:pb-32">
+      <section
+        className="relative overflow-hidden px-4 pt-16 pb-24 sm:px-6 sm:pt-24 sm:pb-32"
+        aria-label="Hero"
+      >
         <div
           className="pointer-events-none absolute inset-0 opacity-30"
           aria-hidden
@@ -148,7 +151,10 @@ export default function HomePage() {
       </section>
 
       {/* Value prop */}
-      <section className="border-y border-border bg-white/60 px-4 py-12 backdrop-blur-sm dark:bg-foreground/5 dark:border-white/10 sm:px-6 sm:py-16">
+      <section
+        className="border-y border-border bg-white/60 px-4 py-12 backdrop-blur-sm dark:bg-foreground/5 dark:border-white/10 sm:px-6 sm:py-16"
+        aria-label="Value proposition"
+      >
         <div className="mx-auto max-w-3xl text-center">
           <p className="font-heading text-xl font-medium text-foreground sm:text-2xl">
             Less noise. Fewer missed messages. One clear view of every request.
@@ -157,9 +163,15 @@ export default function HomePage() {
       </section>
 
       {/* Features */}
-      <section className="px-4 py-16 sm:px-6 sm:py-24">
+      <section
+        className="px-4 py-16 sm:px-6 sm:py-24"
+        aria-labelledby="features-heading"
+      >
         <div className="mx-auto max-w-6xl">
-          <h2 className="font-heading text-center text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+          <h2
+            id="features-heading"
+            className="font-heading text-center text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
+          >
             Why Tickets
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-muted">
@@ -167,7 +179,7 @@ export default function HomePage() {
           </p>
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {features.map(({ title, description, icon: Icon }) => (
-              <div
+              <article
                 key={title}
                 className="group cursor-default rounded-2xl border border-border bg-white/80 p-6 shadow-sm backdrop-blur-md transition-colors duration-200 dark:border-white/10 dark:bg-foreground/5"
               >
@@ -178,14 +190,17 @@ export default function HomePage() {
                   {title}
                 </h3>
                 <p className="mt-2 text-muted">{description}</p>
-              </div>
+              </article>
             ))}
           </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="px-4 py-16 sm:px-6 sm:py-24">
+      <section
+        className="px-4 py-16 sm:px-6 sm:py-24"
+        aria-label="Call to action"
+      >
         <div className="mx-auto max-w-2xl rounded-3xl border border-border bg-white/80 px-6 py-12 text-center shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-foreground/5 sm:px-12 sm:py-16">
           <h2 className="font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             Ready to get started?
