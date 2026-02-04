@@ -54,7 +54,7 @@ const STATUS_OPTIONS = [
 ];
 
 export default function TicketsPage() {
-  const { token } = useAuth();
+  const { token, isReady } = useAuth();
   const [state, dispatch] = useReducer(ticketListFilterReducer, initialFilterState);
   const [appliedParams, setAppliedParams] = useState<TicketListParams>(() =>
     stateToUserListParams(initialFilterState)
@@ -90,6 +90,24 @@ export default function TicketsPage() {
     dispatch({ type: "CLEAR_FILTERS" });
     setAppliedParams(stateToUserListParams(initialFilterState));
   };
+
+  if (!isReady) {
+    return (
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">
+              Support tickets
+            </h1>
+            <p className="mt-1 text-muted">
+              Your support tickets and requests.
+            </p>
+          </div>
+        </div>
+        <p className="mt-6 text-muted">Loading…</p>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -205,13 +223,16 @@ export default function TicketsPage() {
                 pageSize={appliedParams.limit ?? 10}
                 pageSizeOptions={[...LIMIT_OPTIONS]}
                 onChange={(page, pageSize) => {
+                  const newLimit = pageSize ?? (appliedParams.limit ?? 10);
                   setAppliedParams((p) => ({
                     ...p,
                     page,
-                    limit: pageSize ?? (appliedParams.limit ?? 10),
+                    limit: newLimit,
                   }));
                   dispatch({ type: "SET_PAGE", payload: page });
-                  if (pageSize != null) dispatch({ type: "SET_LIMIT", payload: pageSize });
+                  if (pageSize != null && pageSize !== (appliedParams.limit ?? 10)) {
+                    dispatch({ type: "SET_LIMIT", payload: pageSize });
+                  }
                 }}
                 showTotal={(t) => `${t} total`}
               />

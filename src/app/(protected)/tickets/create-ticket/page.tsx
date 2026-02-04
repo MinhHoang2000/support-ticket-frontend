@@ -13,7 +13,7 @@ const CONTENT_MAX = 50_000;
 
 export default function CreateTicketPage() {
   const router = useRouter();
-  const { token } = useAuth();
+  const { token, isReady } = useAuth();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [error, setError] = useState("");
@@ -55,6 +55,30 @@ export default function CreateTicketPage() {
   }
 
   const loading = createTicket.isPending;
+
+  if (!isReady) {
+    return (
+      <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
+        <div className="mb-6">
+          <Link
+            href="/tickets"
+            className="inline-flex cursor-pointer items-center text-sm text-muted transition-colors duration-200 hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2 rounded"
+          >
+            ← Back to tickets
+          </Link>
+        </div>
+        <div className="rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-border dark:bg-foreground/5 sm:p-8">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Create ticket
+          </h1>
+          <p className="mt-1 text-sm text-muted">
+            Describe your issue. A draft reply will be prepared for you.
+          </p>
+          <p className="mt-6 text-muted">Loading…</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6">

@@ -11,32 +11,8 @@ import {
 } from "react";
 import type { User } from "@/types/auth";
 import * as authApi from "@/lib/auth-api";
+import { clearAuth, getStoredAuth, setAuth } from "@/lib/auth-storage";
 import { toastError } from "@/lib/toast";
-
-const STORAGE_KEY = "tickets_auth";
-
-function readStored(): { user: User; token: string } | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const data = JSON.parse(raw) as { user: User; token: string };
-    if (data?.token && data?.user) return data;
-  } catch {
-    // ignore
-  }
-  return null;
-}
-
-function writeStored(user: User, token: string) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ user, token }));
-}
-
-function clearStored() {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem(STORAGE_KEY);
-}
 
 interface AuthContextValue {
   user: User | null;
@@ -61,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const stored = readStored();
+    const stored = getStoredAuth();
     const run = () => {
       if (stored) {
         setUser(stored.user);
@@ -74,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     const data = await authApi.login({ email, password });
-    writeStored(data.user, data.token);
+    setAuth(data.user, data.token);
     setUser(data.user);
     setToken(data.token);
   }, []);
@@ -99,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toastError(err instanceof Error ? err.message : "Logout failed");
       // still clear local state
     }
-    clearStored();
+    clearAuth();
     setUser(null);
     setToken(null);
   }, [token]);

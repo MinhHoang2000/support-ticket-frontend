@@ -1,4 +1,5 @@
 import axios, { type AxiosRequestConfig } from "axios";
+import { getToken } from "./auth-storage";
 
 /**
  * API base URL: /api/v1.
@@ -36,7 +37,8 @@ export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {}
 ): Promise<T> {
-  const { token, headers: optHeaders, body, ...rest } = options;
+  const { token: optToken, headers: optHeaders, body, ...rest } = options;
+  const token = optToken ?? (typeof window !== "undefined" ? getToken() : null);
   const headers = {
     ...optHeaders,
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

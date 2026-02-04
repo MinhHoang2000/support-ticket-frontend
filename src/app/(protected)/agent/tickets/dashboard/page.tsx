@@ -36,7 +36,15 @@ const SENTIMENT_OPTIONS = [
   ...Array.from({ length: 10 }, (_, i) => {
     const n = i + 1;
     const label =
-      n <= 2 ? `${n} - Very negative` : n <= 4 ? `${n} - Negative` : n <= 6 ? `${n} - Neutral` : n <= 8 ? `${n} - Positive` : `${n} - Very positive`;
+      n <= 2
+        ? `${n} - Very negative`
+        : n <= 4
+          ? `${n} - Negative`
+          : n <= 6
+            ? `${n} - Neutral`
+            : n <= 8
+              ? `${n} - Positive`
+              : `${n} - Very positive`;
     return { value: String(n), label };
   }),
 ];
@@ -50,23 +58,28 @@ const CATEGORY_OPTIONS = [
 ];
 
 export default function AgentDashboardPage() {
-  const { token } = useAuth();
-  const [state, dispatch] = useReducer(ticketListFilterReducer, initialFilterState);
+  const { token, isReady } = useAuth();
+  const [state, dispatch] = useReducer(
+    ticketListFilterReducer,
+    initialFilterState,
+  );
   const [appliedParams, setAppliedParams] = useState<TicketListParams>(() =>
-    stateToAgentListParams(initialFilterState)
+    stateToAgentListParams(initialFilterState),
   );
 
   const { data, isLoading, isError, error } = useAllTickets(appliedParams);
 
   const tickets: Ticket[] = data?.tickets ?? [];
   const total = data?.total ?? 0;
-  const totalPages = data?.totalPages ?? 0;
-  const err = error as Error & { status?: number; errorCode?: string } | undefined;
+
+  const err = error as
+    | (Error & { status?: number; errorCode?: string })
+    | undefined;
   const accessDenied =
     isError && err && (err.status === 403 || err.errorCode === "FORBIDDEN");
   const errorMessage =
     isError && !accessDenied && err
-      ? err.message ?? "Failed to load tickets"
+      ? (err.message ?? "Failed to load tickets")
       : null;
 
   const hasActiveFilters = hasActiveAgentFilters(state);
@@ -75,16 +88,7 @@ export default function AgentDashboardPage() {
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      dispatch({ type: "APPLY_SEARCH" });
-      dispatch({ type: "APPLY_CATEGORY" });
-      const synced = {
-        ...state,
-        search: state.searchInput.trim(),
-        searchInput: state.searchInput.trim(),
-        category: state.categoryInput.trim(),
-        categoryInput: state.categoryInput.trim(),
-      };
-      setAppliedParams(stateToAgentListParams(synced));
+      setAppliedParams(stateToAgentListParams(state));
       debounceRef.current = null;
     }, 100);
     return () => {
@@ -96,6 +100,25 @@ export default function AgentDashboardPage() {
     dispatch({ type: "CLEAR_FILTERS" });
     setAppliedParams(stateToAgentListParams(initialFilterState));
   };
+
+  if (!isReady) {
+    return (
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">
+              Agent Dashboard
+            </h1>
+            <p className="mt-1 text-muted">
+              All tickets, color-coded by urgency. Red = high, yellow = medium,
+              green = low.
+            </p>
+          </div>
+        </div>
+        <p className="mt-6 text-muted">Loading…</p>
+      </main>
+    );
+  }
 
   if (accessDenied) {
     return (
@@ -126,7 +149,8 @@ export default function AgentDashboardPage() {
             Agent Dashboard
           </h1>
           <p className="mt-1 text-muted">
-            All tickets, color-coded by urgency. Red = high, yellow = medium, green = low.
+            All tickets, color-coded by urgency. Red = high, yellow = medium,
+            green = low.
           </p>
         </div>
         <Link
@@ -147,7 +171,9 @@ export default function AgentDashboardPage() {
             <span className="text-xs font-medium text-muted">Status</span>
             <AppSelect
               value={state.status}
-              onChange={(v) => dispatch({ type: "SET_STATUS", payload: v ?? "" })}
+              onChange={(v) =>
+                dispatch({ type: "SET_STATUS", payload: v ?? "" })
+              }
               options={STATUS_OPTIONS.map((opt) => ({
                 value: opt.value,
                 label: opt.label,
@@ -160,7 +186,9 @@ export default function AgentDashboardPage() {
             <span className="text-xs font-medium text-muted">Urgency</span>
             <AppSelect
               value={state.urgency}
-              onChange={(v) => dispatch({ type: "SET_URGENCY", payload: v ?? "" })}
+              onChange={(v) =>
+                dispatch({ type: "SET_URGENCY", payload: v ?? "" })
+              }
               options={[
                 { value: "", label: "All" },
                 ...URGENCY_FILTER_OPTIONS.map((opt) => ({
@@ -176,7 +204,9 @@ export default function AgentDashboardPage() {
             <span className="text-xs font-medium text-muted">Sentiment</span>
             <AppSelect
               value={state.sentiment}
-              onChange={(v) => dispatch({ type: "SET_SENTIMENT", payload: v ?? "" })}
+              onChange={(v) =>
+                dispatch({ type: "SET_SENTIMENT", payload: v ?? "" })
+              }
               options={SENTIMENT_OPTIONS.map((opt) => ({
                 value: opt.value,
                 label: opt.label,
@@ -189,7 +219,9 @@ export default function AgentDashboardPage() {
             <span className="text-xs font-medium text-muted">Category</span>
             <AppSelect
               value={state.categoryInput}
-              onChange={(v) => dispatch({ type: "SET_CATEGORY_INPUT", payload: v ?? "" })}
+              onChange={(v) =>
+                dispatch({ type: "SET_CATEGORY_INPUT", payload: v ?? "" })
+              }
               options={CATEGORY_OPTIONS.map((opt) => ({
                 value: opt.value,
                 label: opt.label,
@@ -271,13 +303,19 @@ export default function AgentDashboardPage() {
                 pageSize={appliedParams.limit ?? 10}
                 pageSizeOptions={[...LIMIT_OPTIONS]}
                 onChange={(page, pageSize) => {
+                  const newLimit = pageSize ?? appliedParams.limit ?? 10;
                   setAppliedParams((p) => ({
                     ...p,
                     page,
-                    limit: pageSize ?? (appliedParams.limit ?? 10),
+                    limit: newLimit,
                   }));
                   dispatch({ type: "SET_PAGE", payload: page });
-                  if (pageSize != null) dispatch({ type: "SET_LIMIT", payload: pageSize });
+                  if (
+                    pageSize != null &&
+                    pageSize !== (appliedParams.limit ?? 10)
+                  ) {
+                    dispatch({ type: "SET_LIMIT", payload: pageSize });
+                  }
                 }}
                 showTotal={(t) => `${t} total`}
               />
