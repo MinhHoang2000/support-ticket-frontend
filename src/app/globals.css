@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Design system: Tickets — Indigo primary, emerald CTA */
+/* Design system: Tickets — Indigo primary, emerald CTA. Outfit + Work Sans from Google Fonts. */
 :root {
   --background: #F5F3FF;
   --foreground: #1E1B4B;
@@ -12,6 +12,8 @@
   --muted: #475569;
   --border: #E2E8F0;
   --destructive: #DC2626;
+  --font-outfit: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-work-sans: "Work Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -35,8 +37,9 @@
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
-  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: var(--font-work-sans);
   --font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
+  --font-heading: var(--font-outfit);
 }
 
 body {

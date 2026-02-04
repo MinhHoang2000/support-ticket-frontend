@@ -206,7 +206,7 @@ export default function SignUpPage() {
                     maxLength={100}
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    className="w-full py-2.5 pl-10 pr-3"
+                    className="w-full py-2.5 pl-10! pr-3"
                     placeholder="Jane"
                   />
                 </div>
@@ -230,7 +230,7 @@ export default function SignUpPage() {
                     maxLength={100}
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    className="w-full py-2.5 pl-10 pr-3"
+                    className="w-full py-2.5 pl-10! pr-3"
                     placeholder="Doe"
                   />
                 </div>
@@ -254,7 +254,7 @@ export default function SignUpPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full py-2.5 pl-10 pr-3"
+                  className="w-full py-2.5 pl-10! pr-3"
                   placeholder="you@example.com"
                 />
               </div>
@@ -279,7 +279,7 @@ export default function SignUpPage() {
                   maxLength={128}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full py-2.5 pl-10 pr-10"
+                  className="w-full py-2.5 pl-10! pr-10"
                   placeholder="8+ characters"
                 />
                 <button

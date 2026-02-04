@@ -161,7 +161,7 @@ function SignInForm() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full py-2.5 pl-10 pr-3"
+                  className="w-full py-2.5 pl-10! pr-3"
                   placeholder="you@example.com"
                 />
               </div>
@@ -184,7 +184,7 @@ function SignInForm() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full py-2.5 pl-10 pr-10"
+                  className="w-full py-2.5 pl-10! pr-10"
                   placeholder="••••••••"
                 />
                 <button
