@@ -223,6 +223,12 @@ export default function AgentTicketDetailPage() {
           Created {formatDate(ticket.createdAt)} · Updated{" "}
           {formatDate(ticket.updatedAt)}
         </p>
+        {ticket.category && (
+          <p className="mt-1 text-sm text-muted">
+            Category:{" "}
+            <span className="font-medium text-foreground">{ticket.category}</span>
+          </p>
+        )}
         {ticket.urgency && (
           <p className="mt-1 text-sm text-muted">
             Urgency:{" "}

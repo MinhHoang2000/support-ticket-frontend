@@ -105,7 +105,8 @@ export function useCreateTicket(
     mutationFn: (body: { title: string; content: string }) =>
       createTicket(body, token),
     onSuccess: (data, variables, onMutateResult, context) => {
-      queryClient.invalidateQueries({ queryKey: ticketsKeys.my() });
+      // Invalidate all "my tickets" queries (any params) so list refetches after create
+      queryClient.invalidateQueries({ queryKey: [...ticketsKeys.all, "mine"] });
       userOnSuccess?.(data, variables, onMutateResult, context);
     },
     ...restOptions,

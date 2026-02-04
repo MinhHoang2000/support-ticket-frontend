@@ -86,6 +86,14 @@ export function TicketCard({ ticket, href, variant }: TicketCardProps) {
 
       {isAgent && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
+          {ticket.category && (
+            <span className="text-xs text-muted">
+              Category:{" "}
+              <span className="font-medium text-foreground">
+                {ticket.category}
+              </span>
+            </span>
+          )}
           <span className="text-xs text-muted">Sentiment</span>
           <SentimentBadge sentiment={ticket.sentiment} />
           {ticket.urgency && (
