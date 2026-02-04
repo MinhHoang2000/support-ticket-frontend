@@ -109,6 +109,17 @@ body {
   animation: scale-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
+/* Ant Design inputs: use theme foreground so text matches titles (e.g. Agent draft textarea) */
+.ant-input,
+.ant-input-textarea textarea {
+  color: var(--foreground) !important;
+}
+/* Override Ant Design CSS-in-JS for agent draft textarea (id + disabled) */
+#agent-draft.ant-input,
+#agent-draft.ant-input.ant-input-disabled {
+  color: var(--foreground) !important;
+}
+
 /* Pagination: force text and icons to never match background (override Ant Design tokens) */
 .ant-pagination-item a,
 .ant-pagination-prev button,

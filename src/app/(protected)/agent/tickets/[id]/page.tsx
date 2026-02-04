@@ -251,7 +251,7 @@ export default function AgentTicketDetailPage() {
           <h2 className="text-lg font-medium text-foreground">
             AI draft (editable)
           </h2>
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 mb-4 text-sm text-muted">
             Edit the draft below and save. When ready, click Resolve to mark the
             ticket resolved.
           </p>
@@ -262,6 +262,7 @@ export default function AgentTicketDetailPage() {
             disabled={!canEditDraft}
             rows={12}
             className="mt-2 w-full px-4 py-3 text-sm disabled:opacity-60"
+            style={{ color: "var(--foreground)" }}
             placeholder="AI-generated reply draft…"
             aria-label="AI reply draft"
           />
