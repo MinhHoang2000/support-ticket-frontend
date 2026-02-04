@@ -42,7 +42,7 @@ Create a `.env.local` in the project root (optional):
 yarn dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:8080](http://localhost:8080).
 
 ### Build & start
 
